@@ -370,5 +370,77 @@ int ler_registro(FILE *fp, RegistroEstacao *reg)
     } else {
         reg->nomeEstacao[0] = '\0'; // nome vazio
     }
+
+    if (reg->tamNomeLinha > 0 && reg->tamNomeLinha < 43) {
+        memcpy(reg->nomeLinha, buffer + pos, reg->tamNomeLinha);
+        reg->nomeLinha[reg->tamNomeLinha] = '\0';
+    } else {
+        reg->nomeLinha[0] = '\0';
+    }
+
     return 1; // leitura bem sucedida
+}
+
+void ler_cabecalho(FILE *fp, Cabecalho *cab) {
+
+    /*cab->status = '1'; 
+    cab->topo = -1;
+    cab->proxRRN = 0;
+    cab->nroEstacoes = 0;
+    cab->nroParesEstacao = 0;*/
+
+    fread(&cab->status, sizeof(char), 1, fp);
+    fread(&cab->topo, sizeof(int32_t), 1, fp);
+    fread(&cab->proxRRN, sizeof(int32_t), 1, fp);
+    fread(&cab->nroEstacoes, sizeof(int32_t), 1, fp);
+    fread(&cab->nroParesEstacao, sizeof(int32_t), 1, fp);
+}
+
+
+
+
+void exibir_registro(RegistroEstacao reg) 
+{
+
+    //verifica se o atributo esta nulo ou esta  aplicado corretamente
+
+    if (reg.codEstacao == -1)
+        printf("NULO ");
+    else
+        printf("%d ", reg.codEstacao);
+
+    if (reg.tamNomeEstacao == 0)
+        printf("NULO ");
+    else
+        printf("%s ", reg.nomeEstacao);
+
+    if (reg.codLinha == -1)
+        printf("NULO ");
+    else
+        printf("%d ", reg.codLinha);
+
+    if (reg.tamNomeLinha == 0)
+        printf("NULO ");
+    else
+        printf("%s ", reg.nomeLinha);
+
+    if (reg.codProxEstacao == -1)
+        printf("NULO ");
+    else
+        printf("%d ", reg.codProxEstacao);
+
+    if (reg.distProxEstacao == -1)
+        printf("NULO ");
+    else
+        printf("%d ", reg.distProxEstacao);
+
+    if (reg.codLinhaIntegra == -1)
+        printf("NULO ");
+    else
+        printf("%d ", reg.codLinhaIntegra);
+
+    if (reg.codEstIntegra == -1)
+        printf("NULO\n");
+    else
+        printf("%d\n", reg.codEstIntegra);
 }
