@@ -318,3 +318,57 @@ void funcionalidade1(const char *nome_csv, const char *nome_bin) {
     /* chama binarioNaTela depois de fechar */
     /* binarioNaTela(nome_bin); */
 }
+
+
+int ler_registro(FILE *fp, RegistroEstacao *reg)
+{
+    char buffer[80]; // tenta ler os 80 bytes do registro
+
+    if (fread(buffer, 1, 80, fp) != 80)
+    {
+        return 0; //erro na leitura ou fim
+        
+    }
+    int pos = 0; //onde buffer esta
+    reg->removido = buffer[pos];
+    pos += 1;  
+
+    memcpy(&reg->proximo, buffer + pos, sizeof(int32_t)); // de [1..4]
+    pos += sizeof(int32_t);// acrecimo de 4 bytes para o próximo campo (tamNomeEstacao)
+
+    memcpy(&reg->tamNomeEstacao, buffer + pos, sizeof(int32_t)); // de [5..8]
+    pos += sizeof(int32_t);
+
+    memcpy(&reg->codEstacao, buffer + pos, sizeof(int32_t)); // de [9..12]
+    pos += sizeof(int32_t);
+
+    memcpy(&reg->codLinha, buffer + pos, sizeof(int32_t)); // de [13..16]
+    pos += sizeof(int32_t);
+
+    memcpy(&reg->codProxEstacao, buffer + pos, sizeof(int32_t)); // de [17..20]
+    pos += sizeof(int32_t);
+
+    memcpy(&reg->distProxEstacao, buffer + pos, sizeof(int32_t)); // de [21..24]
+    pos += sizeof(int32_t);
+
+    memcpy(&reg->codLinhaIntegra, buffer + pos, sizeof(int32_t)); // de [25..28]
+    pos += sizeof(int32_t);
+
+    memcpy(&reg->codEstIntegra, buffer + pos, sizeof(int32_t)); // de [29..32]
+    pos += sizeof(int32_t);
+
+    memcpy(&reg->tamNomeLinha, buffer + pos, sizeof(int32_t)); // de [33..36]
+    pos += sizeof(int32_t);
+
+    // Agora pos = 37, onde comeca nomeEstacao
+    if (reg ->tamNomeEstacao > 0 && reg-> tamNomeEstacao < 43 ) //verificacao de buffer
+    {
+        memcpy( reg->nomeEstacao, buffer + pos, reg->tamNomeEstacao);
+        reg->nomeEstacao[reg->tamNomeEstacao] = '\0'; // para terminar a string
+        pos += reg->tamNomeEstacao; // acrecimo do tamanho do nomeEstacao
+
+    } else {
+        reg->nomeEstacao[0] = '\0'; // nome vazio
+    }
+    return 1; // leitura bem sucedida
+}
