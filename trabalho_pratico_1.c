@@ -133,11 +133,11 @@ void ler_linha_csv(char *linha, RegistroEstacao *registro)
 
 
 /* -------------------------------------------------------
- * @brief Escreve o cabeçalho de 17 bytes no arquivo binário.
- *
- * @param fp   arquivo binário aberto para escrita
- * @param cab  cabeçalho a gravar
- * ------------------------------------------------------- */
+ Escreve o cabeçalho de 17 bytes no arquivo binário.
+ 
+  @param fp   arquivo binário aberto para escrita
+  @param cab  cabeçalho a gravar
+  ------------------------------------------------------- */
 void escrever_cabecalho(FILE *fp, Cabecalho cab) {
     char buffer[17];
     memset(buffer, '$', 17);
@@ -160,14 +160,6 @@ void escrever_cabecalho(FILE *fp, Cabecalho cab) {
     fwrite(buffer, 1, 17, fp);
 }
 
-/* -------------------------------------------------------
- * @brief Serializa um RegistroEstacao em exatamente 80
- *        bytes e escreve no arquivo binário.
- *        Bytes não utilizados são preenchidos com '$'.
- *
- * @param fp   arquivo binário aberto para escrita
- * @param reg  registro a gravar
- * ------------------------------------------------------- */
 void escrever_registro(FILE *fp, RegistroEstacao reg) {
     char buffer[80];
     memset(buffer, '$', 80);  /* preenche tudo com lixo */
@@ -233,91 +225,25 @@ void escrever_registro(FILE *fp, RegistroEstacao reg) {
      mas só usamos o que for necessário. O restante do espaço até 80 bytes é preenchido com '$' para garantir 
      que o registro tenha sempre o mesmo tamanho. A variável 'pos' é usada para controlar a posição atual 
      no buffer onde os dados estão sendo escritos. 
-     Depois de escrever os campos fixos, 'pos' aponta para o início dos campos
+     Depois de escrever os campos fixos, 'pos' aponta para o início dos campos, usando ponteiros para os campos
       variáveis, e à medida que escrevemos nomeEstacao e nomeLinha, 'pos' é 
       atualizado para refletir a posição atual. No final, 'pos' pode ser menor que 80,
        mas isso não é um problema, pois o restante do buffer já está preenchido com '$'.
-    /* o restante já está com '$' pelo memset */
-    /* pos nunca ultrapassa 80 pois o CSV garante isso */
+        /* pos nunca ultrapassa 80 pois o CSV garante isso */
 
     fwrite(buffer, 1, 80, fp); // escreve os 80 bytes do registro no arquivo binário
 }
 
-/* -------------------------------------------------------
- * @brief Funcionalidade [1]: lê o CSV e grava o .bin.
- *        Fluxo:
- *          1. chama binarioNaTela antes de abrir o arquivo
- *          2. abre o .bin para escrita
- *          3. grava cabeçalho com status inconsistente ('0')
- *          4. lê cada linha do CSV e grava o registro
- *          5. volta ao início e reescreve cabeçalho consistente ('1')
- *          6. fecha o arquivo
- *          7. chama binarioNaTela depois de fechar
- *
- * @param nome_csv  caminho do arquivo .csv
- * @param nome_bin  caminho do arquivo .bin de saída
- * ------------------------------------------------------- */
-void funcionalidade1(const char *nome_csv, const char *nome_bin) {
-
-    /* chama binarioNaTela antes de abrir para escrita */
-    /* binarioNaTela(nome_bin); */
-
-    FILE *fp = fopen(nome_bin, "wb");
-    if (!fp) {
-        printf("Falha no processamento do arquivo.\n");
-        return;
-    }
-
-    /* Cabeçalho inicial com status inconsistente */
-    Cabecalho cab;
-    cab.status                = '0';   /* inconsistente */
-    cab.topo                  = -1;    /* sem removidos */
-    cab.proxRRN               = 0;     /* primeiro RRN */
-    cab.nroEstacoes       = 0;
-    cab.nroParesEstacao = 0;
-
-    escrever_cabecalho(fp, cab);
-
-    /* Abre o CSV */
-    FILE *csv = fopen(nome_csv, "r");
-    if (!csv) {
-        printf("Falha no processamento do arquivo.\n");
-        fclose(fp);
-        return;
-    }
-
-    char linha[512];
-
-    /* Descarta a primeira linha (cabeçalho do CSV) */
-    fgets(linha, sizeof(linha), csv);
-
-    int qtd = 0;
-    while (fgets(linha, sizeof(linha), csv)) {
-        /* Ignora linhas em branco */
-        if (linha[0] == '\n' || linha[0] == '\r') continue;
-
-        RegistroEstacao reg;
-        ler_linha_csv(linha, &reg);
-        escrever_registro(fp, reg);
-        qtd++;
-    }
-
-    fclose(csv);
-
-    /* Reescreve o cabeçalho com status consistente */
-    cab.status                = '1';
-    cab.proxRRN               = qtd;
-    cab.nroEstacoes       = qtd;   /* ajuste conforme regra real */
-    cab.nroParesEstacao = qtd;   /* ajuste conforme regra real */
-
-    rewind(fp);
-    escrever_cabecalho(fp, cab);
-
-    fclose(fp);
-
-    /* chama binarioNaTela depois de fechar */
-    /* binarioNaTela(nome_bin); */
-}
+/* 
+ 
+       1. chama binarioNaTela antes de abrir o arquivo
+       2. abre o .bin para escrita
+       3. grava cabeçalho com status inconsistente ('0')
+       4. lê cada linha do CSV e grava o registro
+        5. volta ao início e reescreve cabeçalho consistente ('1')
+      6. fecha o arquivo
+       7. chama binarioNaTela depois de fechar
+ */
 
 
 int ler_registro(FILE *fp, RegistroEstacao *reg)
@@ -371,6 +297,12 @@ int ler_registro(FILE *fp, RegistroEstacao *reg)
         reg->nomeEstacao[0] = '\0'; // nome vazio
     }
 
+    if (reg->tamNomeLinha > 0 && reg->tamNomeLinha < 43) {
+        memcpy(reg->nomeLinha, buffer + pos, reg->tamNomeLinha);
+        reg->nomeLinha[reg->tamNomeLinha] = '\0';
+    } else {
+        reg->nomeLinha[0] = '\0';
+    }
     if (reg->tamNomeLinha > 0 && reg->tamNomeLinha < 43) {
         memcpy(reg->nomeLinha, buffer + pos, reg->tamNomeLinha);
         reg->nomeLinha[reg->tamNomeLinha] = '\0';
@@ -443,4 +375,151 @@ void exibir_registro(RegistroEstacao reg)
         printf("NULO\n");
     else
         printf("%d\n", reg.codEstIntegra);
+}
+
+
+void funcionalidade1(const char *nome_csv, const char *nome_bin) {
+
+    /* chama binarioNaTela antes de abrir para escrita */
+    /* binarioNaTela(nome_bin); */
+
+    FILE *fp = fopen(nome_bin, "wb");
+    if (!fp) {
+        printf("Falha no processamento do arquivo.\n");
+        return;
+    }
+
+    /* Cabeçalho inicial com status inconsistente */
+    Cabecalho cab;
+    cab.status                = '0';   /* inconsistente */
+    cab.topo                  = -1;    /* sem removidos */
+    cab.proxRRN               = 0;     /* primeiro RRN */
+    cab.nroEstacoes       = 0;
+    cab.nroParesEstacao = 0;
+
+    escrever_cabecalho(fp, cab);
+
+    /* Abre o CSV */
+    FILE *csv = fopen(nome_csv, "r");
+    if (!csv) {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(fp);
+        return;
+    }
+
+    char linha[512];
+
+    /* Descarta a primeira linha (cabeçalho do CSV) */
+    fgets(linha, sizeof(linha), csv);
+
+    int qtd = 0;
+    while (fgets(linha, sizeof(linha), csv)) {
+        /* Ignora linhas em branco */
+        if (linha[0] == '\n' || linha[0] == '\r') continue;
+
+        RegistroEstacao reg;
+        ler_linha_csv(linha, &reg);
+        escrever_registro(fp, reg);
+        qtd++;
+    }
+
+    fclose(csv);
+
+    /* Reescreve o cabeçalho com status consistente */
+    cab.status                = '1';
+    cab.proxRRN               = qtd;
+    cab.nroEstacoes       = qtd;   /* ajuste conforme regra real */
+    cab.nroParesEstacao = qtd;   /* ajuste conforme regra real */
+
+    rewind(fp);
+    escrever_cabecalho(fp, cab);
+
+    fclose(fp);
+
+    /* chama binarioNaTela depois de fechar */
+    /* binarioNaTela(nome_bin); */
+}
+
+
+
+
+
+
+
+
+
+
+void funcionalidade3(const char *nome_bin,
+                     char campos[][50],
+                     char valores[][50],
+                     int m) {
+
+    FILE *fp = fopen(nome_bin, "rb");
+    if (!fp) {
+        printf("Falha no processamento do arquivo.\n");
+        return;
+    }
+
+    Cabecalho cab;
+    if (!ler_cabecalho(fp, &cab) || cab.status != '1') {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(fp);
+        return;
+    }
+
+    int encontrou = 0;
+    RegistroEstacao reg;
+
+    while (ler_registro(fp, &reg)) { 
+        
+        if (reg.removido == '1') continue;
+
+        // depois de ignorar registros removidos, verifica se o registro bate com os critérios de busca
+        for (int i = 0; i < m; i++) {
+            if (campo_bate(reg, campos[i], valores[i])) {
+                exibir_registro(reg);
+                encontrou = 1;
+                break; /* evita exibir o mesmo registro duas vezes */
+            }
+        }
+    }
+
+    if (!encontrou) { //se nenhum registro bateu com os critérios, exibe mensagem
+        printf("Registro inexistente.\n");
+    }
+
+    fclose(fp);
+}
+
+
+
+
+void funcionalidade4(const char *nome_bin, int rrn) {
+
+    FILE *fp = fopen(nome_bin, "rb");
+    if (!fp) {
+        printf("Falha no processamento do arquivo.\n");
+        return;
+    }
+
+    Cabecalho cab;
+    if (!ler_cabecalho(fp, &cab) || cab.status != '1') {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(fp);
+        return;
+    }
+
+    /* calcula o offset: pula cabeçalho + RRN registros de 80 bytes */
+    long offset = 17 + (long)rrn * 80;
+    fseek(fp, offset, SEEK_SET);
+
+    RegistroEstacao reg;
+    if (!ler_registro(fp, &reg) || reg.removido == '1') {
+        printf("Registro inexistente.\n");
+        fclose(fp);
+        return;
+    }
+
+    exibir_registro(reg);
+    fclose(fp);
 }
