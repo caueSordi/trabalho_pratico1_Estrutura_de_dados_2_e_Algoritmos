@@ -313,22 +313,29 @@ int ler_registro(FILE *fp, RegistroEstacao *reg)
     return 1; // leitura bem sucedida
 }
 
-void ler_cabecalho(FILE *fp, Cabecalho *cab) {
+int ler_cabecalho(FILE *fp, Cabecalho *cab) {
+    char buffer[17];
 
-    /*cab->status = '1'; 
+  /*cab->status = '1'; 
     cab->topo = -1;
     cab->proxRRN = 0;
     cab->nroEstacoes = 0;
     cab->nroParesEstacao = 0;*/
 
-    fread(&cab->status, sizeof(char), 1, fp);
-    fread(&cab->topo, sizeof(int32_t), 1, fp);
-    fread(&cab->proxRRN, sizeof(int32_t), 1, fp);
-    fread(&cab->nroEstacoes, sizeof(int32_t), 1, fp);
-    fread(&cab->nroParesEstacao, sizeof(int32_t), 1, fp);
+    /* lê os 17 bytes de uma vez, consistente com escrever_cabecalho */
+    if (fread(buffer, 1, 17, fp) != 17) {
+        return 0;  /* arquivo vazio ou corrompido */
+    }
+
+    /* desserializa na mesma ordem que escrever_cabecalho */
+    cab->status = buffer[0];
+    memcpy(&cab->topo,            buffer + 1,  sizeof(int32_t));
+    memcpy(&cab->proxRRN,         buffer + 5,  sizeof(int32_t));
+    memcpy(&cab->nroEstacoes,     buffer + 9,  sizeof(int32_t));
+    memcpy(&cab->nroParesEstacao, buffer + 13, sizeof(int32_t));
+
+    return 1;
 }
-
-
 
 
 void exibir_registro(RegistroEstacao reg) 
@@ -441,9 +448,44 @@ void funcionalidade1(const char *nome_csv, const char *nome_bin) {
 }
 
 
+void funcionalidade2(const char *nome_bin) {
 
+    FILE *fp = fopen(nome_bin, "rb");
+    if (!fp) {
+        printf("Falha no processamento do arquivo.\n");
+        return;
+    }
 
+    Cabecalho cab;
+    if (!ler_cabecalho(fp, &cab)) {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(fp);
+        return;
+    }
 
+    /* verifica se o arquivo está consistente */
+    if (cab.status != '1') {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(fp);
+        return;
+    }
+
+    int encontrou = 0;
+    RegistroEstacao reg;
+
+    /* percorre todos os registros do primeiro ao último */
+    while (ler_registro(fp, &reg)) {
+        if (reg.removido == '1') continue;  /* pula removidos */
+        exibir_registro(reg);
+        encontrou = 1;
+    }
+
+    if (!encontrou) {
+        printf("Registro inexistente.\n");
+    }
+
+    fclose(fp);
+}
 
 
 
